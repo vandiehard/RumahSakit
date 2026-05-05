@@ -193,10 +193,54 @@ INSERT INTO obat (nama_obat, satuan, stok, keterangan) VALUES
 ('Vitamin C 500mg', 'Tablet', 1200, 'Suplemen vitamin'),
 ('Betadine', 'Botol', 100, 'Antiseptik luka');
 
--- Initial Appointments (some waiting, some scheduled)
+-- Initial Appointments (some waiting, some scheduled, some finished)
 INSERT INTO pendaftaran (id_pasien, kd_poli, tanggal_jadwal, jenis_perawatan, id_dokter, id_perawat, kd_ruangan, status, keterangan) VALUES
 (1, 1, '2026-05-06 09:00:00', 'Rawat Jalan', 2, 12, 7, 'Dijadwalkan', 'Keluhan pusing dan demam'),
 (2, 2, '2026-05-06 10:00:00', 'Rawat Jalan', 4, 13, 8, 'Dijadwalkan', 'Sakit gigi geraham'),
 (3, 3, '2026-05-07 08:00:00', 'Operasi', 6, 14, 5, 'Dijadwalkan', 'Operasi usus buntu'),
 (4, 4, '2026-05-06 11:00:00', 'Rawat Jalan', 8, 15, 7, 'Menunggu', 'Anak demam tinggi'),
-(5, 1, '2026-05-08 09:00:00', 'Rawat Inap', 2, 16, 1, 'Dijadwalkan', 'Observasi tifus');
+(5, 1, '2026-05-08 09:00:00', 'Rawat Inap', 2, 16, 1, 'Dijadwalkan', 'Observasi tifus'),
+(6, 1, '2026-05-01 08:30:00', 'Rawat Jalan', 2, 12, 7, 'Selesai', 'Pusing dan mual hebat');
+
+-- Dummy Penyakit
+INSERT INTO penyakit (nama_penyakit, keterangan) VALUES 
+('Demam Berdarah Dengue', 'Infeksi virus dengue yang ditularkan oleh nyamuk Aedes aegypti'),
+('Tifus (Demam Tifoid)', 'Infeksi bakteri Salmonella typhi akibat makanan/minuman terkontaminasi'),
+('Gastroenteritis', 'Infeksi saluran pencernaan (Muntaber)'),
+('Hipertensi', 'Kondisi tekanan darah tinggi kronis'),
+('Pulpitis', 'Peradangan pada pulpa gigi');
+
+-- Dummy Tindakan
+INSERT INTO tindakan (nama_tindakan, harga) VALUES 
+('Konsultasi Dokter Umum', 150000),
+('Konsultasi Dokter Spesialis', 250000),
+('Cabut Gigi', 300000),
+('Operasi Usus Buntu', 15000000),
+('Pemeriksaan Darah Lengkap', 200000),
+('Pemasangan Infus', 100000);
+
+-- Dummy Rekam Medis (untuk Pendaftaran #6 yang sudah 'Selesai')
+INSERT INTO rekam_medis (kd_pendaftaran, tanggal, catatan) VALUES
+(6, '2026-05-01 09:00:00', 'Pasien mengalami dehidrasi ringan akibat muntaber, diberikan obat pereda mual dan antibiotik.');
+
+-- Relasi Rekam Medis dengan Penyakit
+INSERT INTO rekam_medis_penyakit (kd_pemeriksaan, kd_penyakit) VALUES
+(1, 3); -- Gastroenteritis
+
+-- Relasi Rekam Medis dengan Tindakan
+INSERT INTO rekam_medis_tindakan (kd_pemeriksaan, kd_tindakan) VALUES
+(1, 1), -- Konsultasi Umum
+(1, 6); -- Pasang Infus
+
+-- Resep Obat
+INSERT INTO resep (kd_pemeriksaan, tanggal) VALUES
+(1, '2026-05-01 09:15:00');
+
+-- Detail Resep
+INSERT INTO detail_resep (kd_resep, kd_obat, jumlah) VALUES
+(1, 1, 10), -- Paracetamol
+(1, 3, 5);  -- Omeprazole
+
+-- Pembayaran
+INSERT INTO pembayaran (kd_pemeriksaan, total, keterangan) VALUES
+(1, 250000, 'Lunas'); -- 150k Konsultasi + 100k Infus (Asumsi obat masuk tagihan terpisah atau sudah include)

@@ -201,7 +201,9 @@ const AdminDashboard = () => {
         </header>
 
         {activeTab === 'tugas' && (
+          <>
           <div className="card-container overflow-x-auto dark:bg-slate-800 dark:border-slate-700">
+            <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-4">Daftar Penugasan Pasien</h3>
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
@@ -226,11 +228,21 @@ const AdminDashboard = () => {
                     <td className="p-3 space-y-2">
                       <select className="input-field text-sm p-1 dark:bg-slate-700 dark:border-slate-600" defaultValue={p.id_dokter || ""} id={`dok-${p.kd_pendaftaran}`}>
                         <option value="">-- Pilih Dokter --</option>
-                        {dokters.map(d => <option key={d.id_pegawai} value={d.id_pegawai}>{d.nama} ({d.spesialisasi})</option>)}
+                        {dokters.map(d => {
+                          const isBusy = pendaftaran.some(pt => pt.id_dokter === d.id_pegawai && pt.status !== 'Selesai' && pt.kd_pendaftaran !== p.kd_pendaftaran);
+                          return <option key={d.id_pegawai} value={d.id_pegawai} disabled={isBusy}>
+                            {d.nama} ({d.spesialisasi}) {isBusy ? '- Not Available' : '- Available'}
+                          </option>;
+                        })}
                       </select>
                       <select className="input-field text-sm p-1 dark:bg-slate-700 dark:border-slate-600" defaultValue={p.id_perawat || ""} id={`per-${p.kd_pendaftaran}`}>
                         <option value="">-- Pilih Perawat --</option>
-                        {perawats.map(pr => <option key={pr.id_pegawai} value={pr.id_pegawai}>{pr.nama}</option>)}
+                        {perawats.map(pr => {
+                          const isBusy = pendaftaran.some(pt => pt.id_perawat === pr.id_pegawai && pt.status !== 'Selesai' && pt.kd_pendaftaran !== p.kd_pendaftaran);
+                          return <option key={pr.id_pegawai} value={pr.id_pegawai} disabled={isBusy}>
+                            {pr.nama} {isBusy ? '- Not Available' : '- Available'}
+                          </option>;
+                        })}
                       </select>
                       <select className="input-field text-sm p-1 dark:bg-slate-700 dark:border-slate-600" defaultValue={p.kd_ruangan || ""} id={`rua-${p.kd_pendaftaran}`}>
                         <option value="">-- Pilih Ruang --</option>
@@ -249,6 +261,50 @@ const AdminDashboard = () => {
               </tbody>
             </table>
           </div>
+          
+          <div className="mt-8 mb-4">
+            <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-4">Status Ketersediaan Pegawai Medis</h3>
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="card-container dark:bg-slate-800 dark:border-slate-700">
+                <h4 className="font-semibold text-lg text-slate-700 dark:text-slate-300 mb-3 border-b pb-2 dark:border-slate-700">Dokter</h4>
+                <div className="space-y-2">
+                  {dokters.map(d => {
+                    const isBusy = pendaftaran.some(pt => pt.id_dokter === d.id_pegawai && pt.status !== 'Selesai');
+                    return (
+                      <div key={d.id_pegawai} className="flex justify-between items-center p-2 rounded hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                        <div>
+                          <p className="font-medium text-slate-800 dark:text-white">Dr. {d.nama}</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">{d.spesialisasi}</p>
+                        </div>
+                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${!isBusy ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
+                          {!isBusy ? 'Available' : 'Not Available'}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="card-container dark:bg-slate-800 dark:border-slate-700">
+                <h4 className="font-semibold text-lg text-slate-700 dark:text-slate-300 mb-3 border-b pb-2 dark:border-slate-700">Perawat</h4>
+                <div className="space-y-2">
+                  {perawats.map(pr => {
+                    const isBusy = pendaftaran.some(pt => pt.id_perawat === pr.id_pegawai && pt.status !== 'Selesai');
+                    return (
+                      <div key={pr.id_pegawai} className="flex justify-between items-center p-2 rounded hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                        <div>
+                          <p className="font-medium text-slate-800 dark:text-white">{pr.nama}</p>
+                        </div>
+                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${!isBusy ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
+                          {!isBusy ? 'Available' : 'Not Available'}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+          </>
         )}
 
         {activeTab === 'pembayaran' && (
