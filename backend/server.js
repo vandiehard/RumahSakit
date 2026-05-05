@@ -70,6 +70,43 @@ app.get('/api/public/jadwal_pasien', async (req, res) => {
     }
 });
 
+app.get('/api/public/poli', async (req, res) => {
+    try {
+        const [rows] = await pool.query('SELECT * FROM poli');
+        res.json({ success: true, data: rows });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
+app.post('/api/public/register', async (req, res) => {
+    const { nama, alamat, telepon, jenis_kelamin, tanggal_lahir, kd_poli, keterangan, jenis_perawatan, tanggal_jadwal } = req.body;
+    const connection = await pool.getConnection();
+    try {
+        await connection.beginTransaction();
+        
+        const [pResult] = await connection.query(
+            'INSERT INTO pasien (nama, alamat, telepon, jenis_kelamin, tanggal_lahir) VALUES (?, ?, ?, ?, ?)',
+            [nama, alamat, telepon, jenis_kelamin, tanggal_lahir]
+        );
+        const id_pasien = pResult.insertId;
+
+        await connection.query(
+            'INSERT INTO pendaftaran (id_pasien, kd_poli, tanggal_jadwal, jenis_perawatan, status, keterangan) VALUES (?, ?, ?, ?, ?, ?)',
+            [id_pasien, kd_poli, tanggal_jadwal, jenis_perawatan, 'Menunggu', keterangan]
+        );
+
+        await connection.commit();
+        res.json({ success: true, id_pasien });
+    } catch (error) {
+        await connection.rollback();
+        console.error(error);
+        res.status(500).json({ success: false, message: error.message || 'Server error' });
+    } finally {
+        connection.release();
+    }
+});
+
 // Admin Routes
 app.get('/api/admin/obat', async (req, res) => {
     try {

@@ -1,11 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
-import { Stethoscope, Activity, MapPin, Phone, Clock, Calendar, Users, HeartPulse, Sun, Moon, ArrowRight } from 'lucide-react';
+import { Stethoscope, Activity, MapPin, Phone, Clock, Calendar, Users, HeartPulse, Sun, Moon, ArrowRight, X } from 'lucide-react';
 
 const LandingPage = () => {
   const [schedules, setSchedules] = useState([]);
+  const [polis, setPolis] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showRegModal, setShowRegModal] = useState(false);
+  const [regData, setRegData] = useState({
+    nama: '',
+    alamat: '',
+    telepon: '',
+    jenis_kelamin: 'L',
+    tanggal_lahir: '',
+    kd_poli: '',
+    keterangan: '',
+    jenis_perawatan: 'Rawat Jalan',
+    tanggal_jadwal: new Date().toISOString().slice(0, 16)
+  });
+
   const [isDarkMode, setIsDarkMode] = useState(() => {
     try {
       const theme = localStorage.getItem('theme');
@@ -16,20 +30,41 @@ const LandingPage = () => {
   });
 
   useEffect(() => {
-    const fetchSchedules = async () => {
+    const fetchData = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/public/jadwal_pasien');
-        if (response.data.success) {
-          setSchedules(response.data.data);
-        }
+        const [resSched, resPoli] = await Promise.all([
+          axios.get('http://localhost:5000/api/public/jadwal_pasien'),
+          axios.get('http://localhost:5000/api/public/poli')
+        ]);
+        if (resSched.data.success) setSchedules(resSched.data.data);
+        if (resPoli.data.success) setPolis(resPoli.data.data);
       } catch (error) {
-        console.error('Error fetching schedules:', error);
+        console.error('Error fetching data:', error);
       } finally {
         setLoading(false);
       }
     };
-    fetchSchedules();
+    fetchData();
   }, []);
+
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await axios.post('http://localhost:5000/api/public/register', regData);
+      if (response.data.success) {
+        alert('Pendaftaran berhasil! Silakan menunggu konfirmasi admin.');
+        setShowRegModal(false);
+        setRegData({
+          nama: '', alamat: '', telepon: '', jenis_kelamin: 'L', tanggal_lahir: '',
+          kd_poli: '', keterangan: '', jenis_perawatan: 'Rawat Jalan',
+          tanggal_jadwal: new Date().toISOString().slice(0, 16)
+        });
+      }
+    } catch (error) {
+      console.error('Registration Error:', error.response?.data || error.message);
+      alert('Gagal mendaftar: ' + (error.response?.data?.message || 'Terjadi kesalahan pada server. Pastikan semua data terisi.'));
+    }
+  };
 
   const toggleTheme = () => {
     const willBeDark = !document.documentElement.classList.contains('dark');
@@ -86,9 +121,9 @@ const LandingPage = () => {
                 Kami memberikan pelayanan medis berkualitas tinggi dengan tenaga medis profesional dan fasilitas modern. Kesehatan Anda adalah prioritas utama kami.
               </p>
               <div className="flex gap-4">
-                <a href="#services" className="btn-primary px-8 py-4 text-lg flex items-center gap-2">
-                  Lihat Layanan <ArrowRight className="h-5 w-5" />
-                </a>
+                <button onClick={() => setShowRegModal(true)} className="btn-primary px-8 py-4 text-lg flex items-center gap-2">
+                  Daftar Sekarang <ArrowRight className="h-5 w-5" />
+                </button>
                 <a href="#schedule" className="bg-white dark:bg-slate-800 text-primary dark:text-blue-400 border border-primary hover:bg-slate-50 dark:hover:bg-slate-700 font-semibold py-4 px-8 rounded-lg shadow-sm transition-colors">
                   Cek Jadwal
                 </a>
@@ -257,6 +292,140 @@ const LandingPage = () => {
           &copy; {new Date().getFullYear()} Klinik Sehat. All rights reserved.
         </div>
       </footer>
+
+      {/* Registration Modal */}
+      {showRegModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-scale-in">
+            <div className="bg-primary p-6 text-white flex justify-between items-center">
+              <div>
+                <h3 className="text-2xl font-bold">Pendaftaran Pasien</h3>
+                <p className="text-blue-100 text-sm">Isi data diri Anda untuk membuat janji temu</p>
+              </div>
+              <button onClick={() => setShowRegModal(false)} className="p-2 hover:bg-white/20 rounded-full transition">
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleRegister} className="p-8 space-y-5 max-h-[70vh] overflow-y-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">Nama Lengkap</label>
+                  <input 
+                    required 
+                    type="text" 
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary outline-none transition"
+                    placeholder="Contoh: Budi Santoso"
+                    value={regData.nama}
+                    onChange={e => setRegData({...regData, nama: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">No. Telepon</label>
+                  <input 
+                    required 
+                    type="tel" 
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary outline-none transition"
+                    placeholder="0812..."
+                    value={regData.telepon}
+                    onChange={e => setRegData({...regData, telepon: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">Jenis Kelamin</label>
+                  <select 
+                    required
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary outline-none transition"
+                    value={regData.jenis_kelamin}
+                    onChange={e => setRegData({...regData, jenis_kelamin: e.target.value})}
+                  >
+                    <option value="L">Laki-laki</option>
+                    <option value="P">Perempuan</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">Tanggal Lahir</label>
+                  <input 
+                    required 
+                    type="date" 
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary outline-none transition"
+                    value={regData.tanggal_lahir}
+                    onChange={e => setRegData({...regData, tanggal_lahir: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">Alamat</label>
+                <textarea 
+                  required 
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary outline-none transition h-24"
+                  placeholder="Alamat lengkap Anda"
+                  value={regData.alamat}
+                  onChange={e => setRegData({...regData, alamat: e.target.value})}
+                ></textarea>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">Pilih Poli</label>
+                  <select 
+                    required
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary outline-none transition"
+                    value={regData.kd_poli}
+                    onChange={e => setRegData({...regData, kd_poli: e.target.value})}
+                  >
+                    <option value="">-- Pilih Poli --</option>
+                    {polis.map(p => (
+                      <option key={p.kd_poli} value={p.kd_poli}>{p.nama_poli}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">Jenis Perawatan</label>
+                  <select 
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary outline-none transition"
+                    value={regData.jenis_perawatan}
+                    onChange={e => setRegData({...regData, jenis_perawatan: e.target.value})}
+                  >
+                    <option value="Rawat Jalan">Rawat Jalan</option>
+                    <option value="Rawat Inap">Rawat Inap</option>
+                    <option value="Operasi">Operasi</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">Waktu Kedatangan</label>
+                <input 
+                  required 
+                  type="datetime-local" 
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary outline-none transition"
+                  value={regData.tanggal_jadwal}
+                  onChange={e => setRegData({...regData, tanggal_jadwal: e.target.value})}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">Keluhan / Keterangan</label>
+                <textarea 
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary outline-none transition h-20"
+                  placeholder="Jelaskan keluhan Anda..."
+                  value={regData.keterangan}
+                  onChange={e => setRegData({...regData, keterangan: e.target.value})}
+                ></textarea>
+              </div>
+
+              <button type="submit" className="w-full bg-primary hover:bg-secondary text-white font-bold py-4 rounded-xl shadow-lg transform hover:-translate-y-1 transition duration-300">
+                Kirim Pendaftaran
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
