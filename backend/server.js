@@ -162,6 +162,69 @@ app.get('/api/admin/pegawai/:jabatan', async (req, res) => {
     }
 });
 
+// Penyakit
+app.get('/api/admin/penyakit', async (req, res) => {
+    try {
+        const [rows] = await pool.query('SELECT * FROM penyakit');
+        res.json({ success: true, data: rows });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+app.post('/api/admin/penyakit', async (req, res) => {
+    try {
+        const { nama_penyakit, keterangan } = req.body;
+        const [result] = await pool.query('INSERT INTO penyakit (nama_penyakit, keterangan) VALUES (?, ?)', [nama_penyakit, keterangan]);
+        res.json({ success: true, id: result.insertId });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
+// Tindakan
+app.get('/api/admin/tindakan', async (req, res) => {
+    try {
+        const [rows] = await pool.query('SELECT * FROM tindakan');
+        res.json({ success: true, data: rows });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+app.post('/api/admin/tindakan', async (req, res) => {
+    try {
+        const { nama_tindakan, harga } = req.body;
+        const [result] = await pool.query('INSERT INTO tindakan (nama_tindakan, harga) VALUES (?, ?)', [nama_tindakan, harga]);
+        res.json({ success: true, id: result.insertId });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
+// Pembayaran
+app.get('/api/admin/pembayaran', async (req, res) => {
+    try {
+        const [rows] = await pool.query(`
+            SELECT p.*, rm.tanggal, pd.kd_pendaftaran, pas.nama as nama_pasien 
+            FROM pembayaran p
+            JOIN rekam_medis rm ON p.kd_pemeriksaan = rm.kd_pemeriksaan
+            JOIN pendaftaran pd ON rm.kd_pendaftaran = pd.kd_pendaftaran
+            JOIN pasien pas ON pd.id_pasien = pas.id_pasien
+            ORDER BY rm.tanggal DESC
+        `);
+        res.json({ success: true, data: rows });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+app.put('/api/admin/pembayaran/:id', async (req, res) => {
+    try {
+        await pool.query('UPDATE pembayaran SET keterangan = ? WHERE kd_pembayaran = ?', [req.body.keterangan, req.params.id]);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
 // Doctor Routes
 app.get('/api/dokter/jadwal/:id_dokter', async (req, res) => {
     try {
@@ -204,17 +267,48 @@ app.post('/api/dokter/resep', async (req, res) => {
 
         // 3. Insert detail_resep and update obat stock
         for (let item of obat_list) {
-            await connection.query(
-                'INSERT INTO detail_resep (kd_resep, kd_obat, jumlah) VALUES (?, ?, ?)',
-                [kd_resep, item.kd_obat, item.jumlah]
-            );
-            await connection.query(
-                'UPDATE obat SET stok = stok - ? WHERE kd_obat = ?',
-                [item.jumlah, item.kd_obat]
-            );
+            if (item.kd_obat) {
+                await connection.query(
+                    'INSERT INTO detail_resep (kd_resep, kd_obat, jumlah) VALUES (?, ?, ?)',
+                    [kd_resep, item.kd_obat, item.jumlah]
+                );
+                await connection.query(
+                    'UPDATE obat SET stok = stok - ? WHERE kd_obat = ?',
+                    [item.jumlah, item.kd_obat]
+                );
+            }
         }
 
-        // 4. Update status pendaftaran
+        // Insert penyakit
+        if (req.body.penyakit_list && req.body.penyakit_list.length > 0) {
+            for (let p of req.body.penyakit_list) {
+                await connection.query(
+                    'INSERT INTO rekam_medis_penyakit (kd_pemeriksaan, kd_penyakit) VALUES (?, ?)',
+                    [kd_pemeriksaan, p]
+                );
+            }
+        }
+
+        // Insert tindakan
+        if (req.body.tindakan_list && req.body.tindakan_list.length > 0) {
+            for (let t of req.body.tindakan_list) {
+                await connection.query(
+                    'INSERT INTO rekam_medis_tindakan (kd_pemeriksaan, kd_tindakan) VALUES (?, ?)',
+                    [kd_pemeriksaan, t]
+                );
+            }
+        }
+
+        // 4. Create Pembayaran
+        // Hitung total dari tindakan + obat (asumsi obat gratis / atau jika ada harga bisa ditambah)
+        let totalBiaya = 0;
+        if (req.body.tindakan_list && req.body.tindakan_list.length > 0) {
+             const [tindakanRows] = await connection.query('SELECT SUM(harga) as total_tindakan FROM tindakan WHERE kd_tindakan IN (?)', [req.body.tindakan_list]);
+             if (tindakanRows[0].total_tindakan) totalBiaya += parseFloat(tindakanRows[0].total_tindakan);
+        }
+        await connection.query('INSERT INTO pembayaran (kd_pemeriksaan, total, keterangan) VALUES (?, ?, ?)', [kd_pemeriksaan, totalBiaya, 'Belum Dibayar']);
+
+        // 5. Update status pendaftaran
         await connection.query('UPDATE pendaftaran SET status = ? WHERE kd_pendaftaran = ?', ['Selesai', kd_pendaftaran]);
 
         await connection.commit();
