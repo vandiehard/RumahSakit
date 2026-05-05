@@ -7,7 +7,14 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('tugas'); // 'tugas', 'obat', 'ruangan', 'penyakit', 'tindakan', 'pembayaran'
   const [user, setUser] = useState(null);
-  const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains('dark'));
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    try {
+      const theme = localStorage.getItem('theme');
+      return theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    } catch (e) {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+  });
   
   // Data states
   const [pendaftaran, setPendaftaran] = useState([]);
@@ -35,14 +42,15 @@ const AdminDashboard = () => {
   }, [navigate]);
 
   const toggleTheme = () => {
-    if (isDarkMode) {
-      document.documentElement.classList.remove('dark');
-      localStorage.theme = 'light';
-      setIsDarkMode(false);
-    } else {
+    const willBeDark = !document.documentElement.classList.contains('dark');
+    if (willBeDark) {
       document.documentElement.classList.add('dark');
-      localStorage.theme = 'dark';
       setIsDarkMode(true);
+      try { localStorage.setItem('theme', 'dark'); } catch (e) {}
+    } else {
+      document.documentElement.classList.remove('dark');
+      setIsDarkMode(false);
+      try { localStorage.setItem('theme', 'light'); } catch (e) {}
     }
   };
 

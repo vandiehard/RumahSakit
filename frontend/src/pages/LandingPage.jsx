@@ -6,12 +6,16 @@ import { Stethoscope, Activity, MapPin, Phone, Clock, Calendar, Users, HeartPuls
 const LandingPage = () => {
   const [schedules, setSchedules] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    try {
+      const theme = localStorage.getItem('theme');
+      return theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    } catch (e) {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+  });
 
   useEffect(() => {
-    // Sync local state with document class
-    setIsDarkMode(document.documentElement.classList.contains('dark'));
-
     const fetchSchedules = async () => {
       try {
         const response = await axios.get('http://localhost:5000/api/public/jadwal_pasien');
@@ -28,14 +32,15 @@ const LandingPage = () => {
   }, []);
 
   const toggleTheme = () => {
-    if (isDarkMode) {
-      document.documentElement.classList.remove('dark');
-      localStorage.theme = 'light';
-      setIsDarkMode(false);
-    } else {
+    const willBeDark = !document.documentElement.classList.contains('dark');
+    if (willBeDark) {
       document.documentElement.classList.add('dark');
-      localStorage.theme = 'dark';
       setIsDarkMode(true);
+      try { localStorage.setItem('theme', 'dark'); } catch (e) {}
+    } else {
+      document.documentElement.classList.remove('dark');
+      setIsDarkMode(false);
+      try { localStorage.setItem('theme', 'light'); } catch (e) {}
     }
   };
 
