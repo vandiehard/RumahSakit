@@ -109,7 +109,7 @@ const Toast = ({ message, type = 'info', duration = 3500, onClose }) => {
  *  remove  : (id) => void
  */
 export const ToastContainer = ({ toasts, remove }) => (
-  <div className="fixed bottom-6 right-6 z-[999] flex flex-col gap-3 pointer-events-none">
+  <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[999] flex flex-col gap-3 pointer-events-none items-center">
     {toasts.map(t => (
       <div key={t.id} className="pointer-events-auto">
         <Toast

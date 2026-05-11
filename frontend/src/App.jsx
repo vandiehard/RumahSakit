@@ -5,6 +5,7 @@ import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
 import DoctorDashboard from './pages/DoctorDashboard';
 import NurseDashboard from './pages/NurseDashboard';
+import PoliDetail from './pages/PoliDetail';
 
 function App() {
   useEffect(() => {
@@ -28,6 +29,7 @@ function App() {
       <div className="min-h-screen bg-slate-50 font-sans">
         <Routes>
           <Route path="/" element={<LandingPage />} />
+          <Route path="/poli/:id" element={<PoliDetail />} />
           <Route path="/login" element={<Login />} />
           
           {/* Protected Routes (Simplified for this demo) */}

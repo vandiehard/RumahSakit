@@ -170,10 +170,15 @@ const LandingPage = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-bold text-center text-slate-800 dark:text-white mb-12">Layanan Konsultasi Kami</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {['Poli Umum', 'Poli Gigi', 'Poli Bedah', 'Poli Anak'].map((poli, idx) => (
-              <div key={idx} className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 text-center hover:border-primary hover:shadow-md transform hover:-translate-y-2 transition duration-300">
-                <h4 className="font-semibold text-xl text-slate-800 dark:text-white">{poli}</h4>
-              </div>
+            {[
+              { id: 'umum', name: 'Poli Umum' },
+              { id: 'gigi', name: 'Poli Gigi' },
+              { id: 'bedah', name: 'Poli Bedah' },
+              { id: 'anak', name: 'Poli Anak' }
+            ].map((poli, idx) => (
+              <Link to={`/poli/${poli.id}`} key={idx} className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 text-center hover:border-primary hover:shadow-md transform hover:-translate-y-2 transition duration-300 block">
+                <h4 className="font-semibold text-xl text-slate-800 dark:text-white">{poli.name}</h4>
+              </Link>
             ))}
           </div>
         </div>
