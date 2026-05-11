@@ -291,6 +291,22 @@ app.put('/api/admin/pembayaran/:id', async (req, res) => {
     }
 });
 
+app.delete('/api/admin/pembayaran/:id', async (req, res) => {
+    try {
+        const [rows] = await pool.query('SELECT keterangan FROM pembayaran WHERE kd_pembayaran = ?', [req.params.id]);
+        if (rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Data tidak ditemukan' });
+        }
+        if (rows[0].keterangan === 'Belum Dibayar') {
+            return res.status(400).json({ success: false, message: 'Pembayaran belum lunas tidak dapat dihapus' });
+        }
+        await pool.query('DELETE FROM pembayaran WHERE kd_pembayaran = ?', [req.params.id]);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
 // Doctor Routes
 app.get('/api/dokter/jadwal/:id_dokter', async (req, res) => {
     try {
