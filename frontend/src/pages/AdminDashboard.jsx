@@ -57,6 +57,13 @@ const AdminDashboard = () => {
   const [exportMonth, setExportMonth] = useState(new Date().getMonth() + 1);
   const [exportYear, setExportYear] = useState(new Date().getFullYear());
 
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    onConfirm: null
+  });
+
   useEffect(() => {
     const userData = JSON.parse(localStorage.getItem("user"));
     if (!userData || userData.jabatan !== "Admin") {
@@ -185,16 +192,23 @@ const AdminDashboard = () => {
     }
   };
 
-  const submitForm = async (e, endpoint, payload, successMsg) => {
+  const submitForm = (e, endpoint, payload, successMsg) => {
     e.preventDefault();
-    try {
-      await axios.post(`http://localhost:5000/api/admin/${endpoint}`, payload);
-      showAlert(`✅ ${successMsg}`, 'success');
-      setModalType(null);
-      fetchData();
-    } catch (e) {
-      showAlert("❌ Gagal memproses data", 'error');
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: "Konfirmasi Simpan",
+      message: "Apakah Anda yakin ingin menyimpan data ini?",
+      onConfirm: async () => {
+        try {
+          await axios.post(`http://localhost:5000/api/admin/${endpoint}`, payload);
+          showAlert(`✅ ${successMsg}`, 'success');
+          setModalType(null);
+          fetchData();
+        } catch (e) {
+          showAlert("❌ Gagal memproses data", 'error');
+        }
+      }
+    });
   };
 
   const submitUpdateStok = async (e) => {
@@ -277,19 +291,24 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleDeletePembayaran = async (id, keterangan) => {
+  const handleDeletePembayaran = (id, keterangan) => {
     if (keterangan === 'Belum Dibayar') {
       return showAlert("❌ Pembayaran belum lunas tidak dapat dihapus", 'error');
     }
-    if (window.confirm('Apakah Anda yakin ingin menghapus data ini?')) {
-      try {
-        await axios.delete(`http://localhost:5000/api/admin/pembayaran/${id}`);
-        showAlert("✅ Data berhasil dihapus", 'success');
-        fetchData();
-      } catch (e) {
-        showAlert("❌ Gagal menghapus data", 'error');
+    setConfirmModal({
+      isOpen: true,
+      title: "Konfirmasi Hapus",
+      message: "Apakah Anda yakin ingin menghapus data pembayaran ini?",
+      onConfirm: async () => {
+        try {
+          await axios.delete(`http://localhost:5000/api/admin/pembayaran/${id}`);
+          showAlert("✅ Data berhasil dihapus", 'success');
+          fetchData();
+        } catch (e) {
+          showAlert("❌ Gagal menghapus data", 'error');
+        }
       }
-    }
+    });
   };
 
   return (
@@ -354,13 +373,59 @@ const AdminDashboard = () => {
             {isDarkMode ? "Tema Terang" : "Tema Gelap"}
           </button>
           <button
-            onClick={handleLogout}
+            onClick={() => {
+              setConfirmModal({
+                isOpen: true,
+                title: "Konfirmasi Logout",
+                message: "Apakah Anda yakin ingin keluar?",
+                onConfirm: handleLogout
+              });
+            }}
             className="flex items-center gap-3 w-full px-4 py-3 text-red-400 hover:bg-red-900/30 rounded-lg transition"
           >
             <LogOut className="h-5 w-5" /> Logout
           </button>
         </div>
       </div>
+
+      {/* Confirm Modal */}
+      {confirmModal.isOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[1000]">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-8 w-full max-w-sm relative transform scale-100 transition-all">
+            <button 
+              onClick={() => setConfirmModal({ ...confirmModal, isOpen: false })} 
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 dark:hover:text-white transition"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">{confirmModal.title}</h3>
+            <p className="text-slate-600 dark:text-slate-300 mb-8">{confirmModal.message}</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setConfirmModal({ ...confirmModal, isOpen: false });
+                }}
+                className="flex-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-semibold py-2.5 rounded-xl transition"
+              >
+                Tidak
+              </button>
+              <button
+                onClick={() => {
+                  setConfirmModal({ ...confirmModal, isOpen: false });
+                  if (confirmModal.onConfirm) confirmModal.onConfirm();
+                }}
+                className={`flex-1 font-semibold py-2.5 rounded-xl transition text-white ${
+                  confirmModal.title.includes("Hapus") || confirmModal.title.includes("Logout") 
+                  ? "bg-red-500 hover:bg-red-600" 
+                  : "bg-primary hover:bg-secondary"
+                }`}
+              >
+                Iya
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <div className="flex-1 ml-64 p-8 dark:text-slate-100">
