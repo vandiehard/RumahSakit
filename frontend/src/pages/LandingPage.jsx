@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
-import { Stethoscope, Activity, MapPin, Phone, Clock, Calendar, Users, HeartPulse, Sun, Moon, ArrowRight, X } from 'lucide-react';
+import { Stethoscope, Activity, MapPin, Phone, Clock, Calendar, Users, HeartPulse, Sun, Moon, ArrowRight, X, Star, MessageSquare } from 'lucide-react';
+import { useToast, ToastContainer } from '../components/Toast';
 
 const LandingPage = () => {
   const [schedules, setSchedules] = useState([]);
   const [polis, setPolis] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showRegModal, setShowRegModal] = useState(false);
+  const [reviews, setReviews] = useState([]);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [newReview, setNewReview] = useState({ name: '', kd_poli: '', text: '' });
   const [regData, setRegData] = useState({
     nama: '',
     alamat: '',
@@ -19,6 +23,8 @@ const LandingPage = () => {
     jenis_perawatan: 'Rawat Jalan',
     tanggal_jadwal: new Date().toISOString().slice(0, 16)
   });
+
+  const { toast, toasts, remove } = useToast();
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
     try {
@@ -32,12 +38,19 @@ const LandingPage = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [resSched, resPoli] = await Promise.all([
+        const [resSched, resPoli, resUlasan] = await Promise.all([
           axios.get('http://localhost:5000/api/public/jadwal_pasien'),
-          axios.get('http://localhost:5000/api/public/poli')
+          axios.get('http://localhost:5000/api/public/poli'),
+          axios.get('http://localhost:5000/api/public/ulasan')
         ]);
         if (resSched.data.success) setSchedules(resSched.data.data);
-        if (resPoli.data.success) setPolis(resPoli.data.data);
+        if (resPoli.data.success) {
+          setPolis(resPoli.data.data);
+          if (resPoli.data.data.length > 0) {
+             setNewReview(prev => ({...prev, kd_poli: resPoli.data.data[0].kd_poli}));
+          }
+        }
+        if (resUlasan.data.success) setReviews(resUlasan.data.data);
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -52,7 +65,7 @@ const LandingPage = () => {
     try {
       const response = await axios.post('http://localhost:5000/api/public/register', regData);
       if (response.data.success) {
-        alert('Pendaftaran berhasil! Silakan menunggu konfirmasi admin.');
+        toast.success('Pendaftaran berhasil! Silakan menunggu konfirmasi admin.');
         setShowRegModal(false);
         setRegData({
           nama: '', alamat: '', telepon: '', jenis_kelamin: 'L', tanggal_lahir: '',
@@ -62,9 +75,35 @@ const LandingPage = () => {
       }
     } catch (error) {
       console.error('Registration Error:', error.response?.data || error.message);
-      alert('Gagal mendaftar: ' + (error.response?.data?.message || 'Terjadi kesalahan pada server. Pastikan semua data terisi.'));
+      toast.error('Gagal mendaftar: ' + (error.response?.data?.message || 'Terjadi kesalahan pada server. Pastikan semua data terisi.'));
     }
   };
+
+  const handleReviewSubmit = async (e) => {
+    e.preventDefault();
+    if (newReview.name && newReview.text && newReview.kd_poli) {
+      try {
+        const response = await axios.post('http://localhost:5000/api/public/ulasan', {
+          nama_pasien: newReview.name,
+          kd_poli: newReview.kd_poli,
+          komentar: newReview.text,
+          rating: 5
+        });
+        if (response.data.success) {
+          toast.success('Terima kasih! Ulasan Anda telah berhasil dikirim.');
+          setShowReviewModal(false);
+          // Refetch reviews
+          const resUlasan = await axios.get('http://localhost:5000/api/public/ulasan');
+          if (resUlasan.data.success) setReviews(resUlasan.data.data);
+          
+          setNewReview({ name: '', kd_poli: polis.length > 0 ? polis[0].kd_poli : '', text: '' });
+        }
+      } catch (error) {
+         toast.error('Gagal mengirim ulasan.');
+      }
+    }
+  };
+
 
   const toggleTheme = () => {
     const willBeDark = !document.documentElement.classList.contains('dark');
@@ -81,6 +120,7 @@ const LandingPage = () => {
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-900 transition-colors duration-300">
+      <ToastContainer toasts={toasts} remove={remove} />
       {/* Navbar */}
       <nav className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-50 border-b border-slate-200 dark:border-slate-800 transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -249,6 +289,45 @@ const LandingPage = () => {
                 Tidak ada jadwal aktif saat ini.
               </div>
             )}
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials / Reviews */}
+      <section id="reviews" className="py-20 bg-white dark:bg-slate-800 transition-colors">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row justify-between items-center mb-12">
+            <div className="text-center md:text-left mb-6 md:mb-0">
+              <h2 className="text-3xl font-bold text-slate-800 dark:text-white flex items-center gap-3 justify-center md:justify-start">
+                <MessageSquare className="h-8 w-8 text-primary dark:text-blue-400" />
+                Ulasan Pasien Kami
+              </h2>
+              <p className="text-slate-600 dark:text-slate-400 mt-2">Apa kata mereka tentang pelayanan Klinik Sehat?</p>
+            </div>
+            <button onClick={() => setShowReviewModal(true)} className="btn-primary px-6 py-3 flex items-center gap-2">
+              <MessageSquare className="h-5 w-5" /> Tulis Ulasan
+            </button>
+          </div>
+          
+          <div className="grid md:grid-cols-3 gap-8">
+            {reviews.map((review) => (
+              <div key={review.id_ulasan} className="bg-slate-50 dark:bg-slate-700 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-600 hover:shadow-md transition">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h4 className="font-bold text-lg text-slate-800 dark:text-white">{review.nama_pasien}</h4>
+                    <span className="text-xs font-semibold px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 rounded-full mt-1 inline-block">
+                      {review.nama_poli}
+                    </span>
+                  </div>
+                  <div className="flex text-amber-400">
+                    {[...Array(review.rating || 5)].map((_, i) => (
+                      <Star key={i} className="h-4 w-4 fill-current" />
+                    ))}
+                  </div>
+                </div>
+                <p className="text-slate-600 dark:text-slate-300 italic leading-relaxed">"{review.komentar}"</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -426,6 +505,65 @@ const LandingPage = () => {
 
               <button type="submit" className="w-full bg-primary hover:bg-secondary text-white font-bold py-4 rounded-xl shadow-lg transform hover:-translate-y-1 transition duration-300">
                 Kirim Pendaftaran
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* Review Modal */}
+      {showReviewModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-scale-in">
+            <div className="bg-primary p-6 text-white flex justify-between items-center">
+              <div>
+                <h3 className="text-2xl font-bold">Tulis Ulasan</h3>
+                <p className="text-blue-100 text-sm">Bagikan pengalaman Anda</p>
+              </div>
+              <button onClick={() => setShowReviewModal(false)} className="p-2 hover:bg-white/20 rounded-full transition">
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleReviewSubmit} className="p-8 space-y-5">
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">Nama Anda</label>
+                <input 
+                  required 
+                  type="text" 
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary outline-none transition"
+                  placeholder="Contoh: Budi Santoso"
+                  value={newReview.name}
+                  onChange={e => setNewReview({...newReview, name: e.target.value})}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">Poli yang Dikunjungi</label>
+                <select 
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary outline-none transition"
+                  value={newReview.kd_poli}
+                  onChange={e => setNewReview({...newReview, kd_poli: e.target.value})}
+                >
+                  <option value="">-- Pilih Poli --</option>
+                  {polis.map(p => (
+                    <option key={p.kd_poli} value={p.kd_poli}>{p.nama_poli}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">Ulasan</label>
+                <textarea 
+                  required
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary outline-none transition h-28"
+                  placeholder="Ceritakan pengalaman Anda di sini..."
+                  value={newReview.text}
+                  onChange={e => setNewReview({...newReview, text: e.target.value})}
+                ></textarea>
+              </div>
+
+              <button type="submit" className="w-full bg-primary hover:bg-secondary text-white font-bold py-4 rounded-xl shadow-lg transform hover:-translate-y-1 transition duration-300">
+                Kirim Ulasan
               </button>
             </form>
           </div>

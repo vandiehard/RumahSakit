@@ -107,6 +107,35 @@ app.post('/api/public/register', async (req, res) => {
     }
 });
 
+app.get('/api/public/ulasan', async (req, res) => {
+    try {
+        const [rows] = await pool.query(`
+            SELECT u.*, p.nama_poli 
+            FROM ulasan u
+            JOIN poli p ON u.kd_poli = p.kd_poli
+            ORDER BY u.tanggal DESC
+        `);
+        res.json({ success: true, data: rows });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
+app.post('/api/public/ulasan', async (req, res) => {
+    const { nama_pasien, kd_poli, komentar, rating } = req.body;
+    try {
+        const [result] = await pool.query(
+            'INSERT INTO ulasan (nama_pasien, kd_poli, rating, komentar) VALUES (?, ?, ?, ?)',
+            [nama_pasien, kd_poli, rating || 5, komentar]
+        );
+        res.json({ success: true, id_ulasan: result.insertId });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
 // Admin Routes
 app.get('/api/admin/obat', async (req, res) => {
     try {

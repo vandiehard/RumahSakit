@@ -142,13 +142,13 @@ const Login = () => {
             </button>
           </div>
 
-          {/* Hint accounts */}
+          {/* Hint accounts
           <div className="text-xs text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-700/50 rounded-lg p-3 space-y-1">
             <p className="font-semibold text-slate-500 dark:text-slate-400 mb-1">Akun Demo:</p>
             <p>👤 Admin: <span className="font-mono">admin</span> / <span className="font-mono">admin123</span></p>
             <p>🩺 Dokter: <span className="font-mono">dokter_andi</span> / <span className="font-mono">dokter123</span></p>
             <p>💉 Perawat: <span className="font-mono">perawat_ani</span> / <span className="font-mono">perawat123</span></p>
-          </div>
+          </div> */}
 
           {/* Submit */}
           <button
