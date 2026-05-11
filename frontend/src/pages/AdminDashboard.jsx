@@ -15,10 +15,11 @@ import {
   Sun,
   Moon,
 } from "lucide-react";
+import { ToastContainer, useToast } from "../components/Toast";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("tugas"); // 'tugas', 'obat', 'ruangan', 'penyakit', 'tindakan', 'pembayaran'
+  const [activeTab, setActiveTab] = useState("tugas");
   const [user, setUser] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     try {
@@ -31,6 +32,9 @@ const AdminDashboard = () => {
       return window.matchMedia("(prefers-color-scheme: dark)").matches;
     }
   });
+
+  // Toast
+  const { toasts, toast, remove } = useToast();
 
   // Data states
   const [pendaftaran, setPendaftaran] = useState([]);
@@ -46,8 +50,7 @@ const AdminDashboard = () => {
   // Modal States
   const [modalType, setModalType] = useState(null);
   const [modalData, setModalData] = useState({});
-  const [alertMessage, setAlertMessage] = useState("");
-  const [assignStaffModal, setAssignStaffModal] = useState(null); // { staff, role }
+  const [assignStaffModal, setAssignStaffModal] = useState(null);
 
   useEffect(() => {
     const userData = JSON.parse(localStorage.getItem("user"));
@@ -126,15 +129,14 @@ const AdminDashboard = () => {
     navigate("/login");
   };
 
-  const showAlert = (msg) => {
-    setAlertMessage(msg);
-    setModalType("alert");
+  const showAlert = (msg, type = 'info') => {
+    toast[type](msg);
   };
 
   // Assign Task Handler
   const assignTask = async (id, doctorId, nurseId, roomId, currentStatus) => {
     if (!doctorId || !nurseId)
-      return showAlert("Pilih dokter dan perawat terlebih dahulu!");
+      return showAlert("Pilih dokter dan perawat terlebih dahulu!", 'warning');
     try {
       await axios.put(
         `http://localhost:5000/api/admin/pendaftaran/${id}/assign`,
@@ -145,10 +147,10 @@ const AdminDashboard = () => {
           status: currentStatus === "Menunggu" ? "Dijadwalkan" : currentStatus,
         },
       );
-      showAlert("Tugas berhasil diberikan!");
+      showAlert("✅ Tugas berhasil diberikan!", 'success');
       fetchData();
     } catch (e) {
-      showAlert("Gagal memberikan tugas");
+      showAlert("❌ Gagal memberikan tugas", 'error');
     }
   };
 
@@ -156,10 +158,10 @@ const AdminDashboard = () => {
   const submitAssignFromStaff = async (e) => {
     e.preventDefault();
     const { staff, role, kd_pendaftaran, kd_ruangan } = assignStaffModal;
-    if (!kd_pendaftaran) return showAlert("Pilih pasien terlebih dahulu!");
+    if (!kd_pendaftaran) return showAlert("Pilih pasien terlebih dahulu!", 'warning');
 
     const pendTarget = pendaftaran.find(p => p.kd_pendaftaran === parseInt(kd_pendaftaran));
-    if (!pendTarget) return showAlert("Data pendaftaran tidak ditemukan.");
+    if (!pendTarget) return showAlert("Data pendaftaran tidak ditemukan.", 'error');
 
     const payload = {
       id_dokter: role === 'Dokter' ? staff.id_pegawai : (pendTarget.id_dokter || null),
@@ -171,10 +173,10 @@ const AdminDashboard = () => {
     try {
       await axios.put(`http://localhost:5000/api/admin/pendaftaran/${kd_pendaftaran}/assign`, payload);
       setAssignStaffModal(null);
-      showAlert(`${role} berhasil ditugaskan ke pasien!`);
+      showAlert(`✅ ${role} berhasil ditugaskan ke pasien!`, 'success');
       fetchData();
     } catch (err) {
-      showAlert("Gagal memberikan tugas.");
+      showAlert("❌ Gagal memberikan tugas.", 'error');
     }
   };
 
@@ -182,11 +184,11 @@ const AdminDashboard = () => {
     e.preventDefault();
     try {
       await axios.post(`http://localhost:5000/api/admin/${endpoint}`, payload);
-      showAlert(successMsg);
+      showAlert(`✅ ${successMsg}`, 'success');
       setModalType(null);
       fetchData();
     } catch (e) {
-      showAlert("Gagal memproses data");
+      showAlert("❌ Gagal memproses data", 'error');
     }
   };
 
@@ -196,11 +198,11 @@ const AdminDashboard = () => {
       await axios.put(`http://localhost:5000/api/admin/obat/${modalData.id}`, {
         stok: parseInt(modalData.stok),
       });
-      showAlert("Stok berhasil diperbarui!");
+      showAlert("✅ Stok berhasil diperbarui!", 'success');
       setModalType(null);
       fetchData();
     } catch (e) {
-      showAlert("Gagal memperbarui stok");
+      showAlert("❌ Gagal memperbarui stok", 'error');
     }
   };
 
@@ -211,11 +213,11 @@ const AdminDashboard = () => {
         `http://localhost:5000/api/admin/ruangan/${modalData.id}`,
         { status_ruangan: modalData.status },
       );
-      showAlert("Status ruangan berhasil diperbarui!");
+      showAlert("✅ Status ruangan berhasil diperbarui!", 'success');
       setModalType(null);
       fetchData();
     } catch (e) {
-      showAlert("Gagal memperbarui status ruangan");
+      showAlert("❌ Gagal memperbarui status ruangan", 'error');
     }
   };
 
@@ -226,11 +228,11 @@ const AdminDashboard = () => {
         `http://localhost:5000/api/admin/pembayaran/${modalData.id}`,
         { keterangan: modalData.keterangan },
       );
-      showAlert("Status pembayaran berhasil diperbarui!");
+      showAlert("✅ Status pembayaran berhasil diperbarui!", 'success');
       setModalType(null);
       fetchData();
     } catch (e) {
-      showAlert("Gagal memperbarui pembayaran");
+      showAlert("❌ Gagal memperbarui pembayaran", 'error');
     }
   };
 
@@ -825,6 +827,9 @@ const AdminDashboard = () => {
         )}
       </div>
 
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} remove={remove} />
+
       {/* Modals */}
       {modalType && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in-up">
@@ -835,23 +840,6 @@ const AdminDashboard = () => {
             >
               <X className="h-6 w-6" />
             </button>
-
-            {modalType === "alert" && (
-              <div className="text-center">
-                <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-4">
-                  Informasi
-                </h3>
-                <p className="text-slate-600 dark:text-slate-300 mb-6">
-                  {alertMessage}
-                </p>
-                <button
-                  onClick={() => setModalType(null)}
-                  className="btn-primary w-full"
-                >
-                  Tutup
-                </button>
-              </div>
-            )}
 
             {modalType === "tambah_obat" && (
               <form
